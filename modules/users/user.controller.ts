@@ -1,12 +1,32 @@
-import { Request, Response } from "express";
+import { NextFunction, Request, Response } from "express";
 import { AuthenticatedRequest } from "../../core/middlewares/auth.middleware";
 import { BadRequestError } from "../../core/errors/custom-errors";
 import * as userService from "../../modules/users/user.service";
+
+export const getUserDashboard = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+  try {
+    const { name, role } = req.user!;
+    res.status(200).json({
+      message: `Bienvenido al dashboard, ${name}. Tu rol es ${role}.`,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
 
 // Profile management
 export const getProfile = async (req: AuthenticatedRequest, res: Response) => {
   const user = await userService.getProfileById(req.user!.id);
   res.json(user);
+};
+
+export const getEmployees = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+  try {
+    const employees = await userService.getUsersByRole("employee");
+    res.json(employees);
+  } catch (error) {
+    next(error);
+  }
 };
 
 export const updateProfile = async (req: AuthenticatedRequest, res: Response) => {
@@ -24,6 +44,18 @@ export const deleteAccount = async (req: AuthenticatedRequest, res: Response) =>
   await userService.softDeleteUser(req.user!.id);
   res.json({ message: "Cuenta eliminada correctamente" });
 };
+
+export const deleteUserById = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const userId = req.params.id;
+    await userService.softDeleteUser(userId);
+    res.json({ message: "Usuario eliminado correctamente" });
+  } catch (error) {
+    next(error);
+  }
+};
+
+
 
 // Address management
 export const getAddresses = async (req: AuthenticatedRequest, res: Response) => {

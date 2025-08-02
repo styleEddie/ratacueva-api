@@ -1,4 +1,10 @@
 import { Router } from "express";
+import * as userController from "../../modules/users/user.controller";
+import { authenticate } from "../../core/middlewares/auth.middleware";
+import { upload } from "../../core/middlewares/upload.middleware";
+import { validate } from "../../core/middlewares/validate.middleware";
+import { updateProfileSchema, changePasswordSchema, addressSchema, paymentMethodSchema, partialAddressSchema, partialPaymentMethodSchema } from "../../modules/users/user.schema";
+import { authorize } from "../../core/middlewares/role.middleware";
 
 /**
  * @swagger
@@ -6,13 +12,18 @@ import { Router } from "express";
  *   name: Users
  *   description: User management and profile-related endpoints
  */
-import * as userController from "../../modules/users/user.controller";
-import { authenticate } from "../../core/middlewares/auth.middleware";
-import { upload } from "../../core/middlewares/upload.middleware";
-import { validate } from "../../core/middlewares/validate.middleware";
-import { updateProfileSchema, changePasswordSchema, addressSchema, paymentMethodSchema, partialAddressSchema, partialPaymentMethodSchema } from "../../modules/users/user.schema";
+
 
 const router = Router();
+
+// Ruta protegida: solo 'employee' o 'admin'
+router.get(
+    '/dashboard',
+    authenticate,
+    authorize('employee', 'admin'),
+    userController.getUserDashboard
+);
+
 
 // Profile management routes
 
@@ -66,6 +77,30 @@ router.patch("/me", authenticate, validate(updateProfileSchema), userController.
 
 /**
  * @swagger
+ * /api/users/employees:
+ *   get:
+ *     summary: Get all employees (admin only)
+ *     tags: [Users]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: List of employees
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items:
+ *                 $ref: '#/components/schemas/User'
+ *       401:
+ *         description: Unauthorized
+ *       403:
+ *         description: Forbidden
+ */
+router.get("/employees", authenticate, authorize("admin"), userController.getEmployees);
+
+/**
+ * @swagger
  * /api/users/change-password:
  *   patch:
  *     summary: Change user password
@@ -103,6 +138,34 @@ router.patch("/change-password", authenticate, validate(changePasswordSchema), u
  *         description: Unauthorized
  */
 router.delete("/delete", authenticate, userController.deleteAccount);
+
+/**
+ * @swagger
+ * /api/users/{id}:
+ *   delete:
+ *     summary: Delete user by ID (admin only)
+ *     tags: [Users]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: The user ID
+ *     responses:
+ *       200:
+ *         description: User deleted successfully
+ *       401:
+ *         description: Unauthorized
+ *       403:
+ *         description: Forbidden
+ *       404:
+ *         description: User not found
+ */
+router.delete("/:id", authenticate, authorize("admin"), userController.deleteUserById);
+
 
 /**
  * @swagger
